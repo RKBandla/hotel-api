@@ -17,12 +17,22 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(NotFoundException ex) {
-        return error(HttpStatus.NOT_FOUND, ex.getMessage());
+        return error(HttpStatus.NOT_FOUND, ex.getMessage());              // 404
     }
 
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<Map<String, Object>> handleRule(BusinessRuleException ex) {
-        return error(HttpStatus.BAD_REQUEST, ex.getMessage());
+        return error(HttpStatus.BAD_REQUEST, ex.getMessage());            // 400
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleConflict(ConflictException ex) {
+        return error(HttpStatus.CONFLICT, ex.getMessage());               // 409
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<Map<String, Object>> handleUnauthorized(UnauthorizedException ex) {
+        return error(HttpStatus.UNAUTHORIZED, ex.getMessage());           // 401
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
