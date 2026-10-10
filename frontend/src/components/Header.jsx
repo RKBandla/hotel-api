@@ -1,8 +1,11 @@
-function Header({ username, page, onNavigate, onLogout }) {
+function Header({ user, page, onNavigate, onLogout }) {
+    const isAdmin = user.role === "ADMIN";
+
+    // Guests tab only for ADMIN; a guest sees "My bookings"
     const pages = [
         { key: "rooms", label: "Rooms" },
-        { key: "guests", label: "Guests" },
-        { key: "bookings", label: "Bookings" },
+        ...(isAdmin ? [{ key: "guests", label: "Guests" }] : []),
+        { key: "bookings", label: isAdmin ? "Bookings" : "My bookings" },
     ];
 
     return (
@@ -20,7 +23,9 @@ function Header({ username, page, onNavigate, onLogout }) {
                 ))}
             </nav>
             <div>
-                <span>Hi, {username} </span>
+        <span>
+          Hi, {user.username} <span className="role-badge">{user.role}</span>{" "}
+        </span>
                 <button className="secondary" onClick={onLogout}>
                     Logout
                 </button>

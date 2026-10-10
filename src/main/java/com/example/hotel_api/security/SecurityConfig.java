@@ -1,9 +1,11 @@
 package com.example.hotel_api.security;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -29,29 +31,34 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())                 // not needed for a token-based REST API
-                .cors(Customizer.withDefaults())              // allow the React app (Step 4) to call us
+                .csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()   // register + login are open
-                        .anyRequest().authenticated())                 // everything else needs a token
-                .exceptionHandling(ex -> ex.authenticationEntryPoint((request, response, e) -> {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.setContentType("application/json");
-                    response.getWriter().write("{\"error\":\"Unauthorized - missing or invalid token\"}");
-                }))
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()                          // browser CORS pre-checks
+                        .requestMatchers("/api/auth/**").permitAll()                                     // register + login
+                        .requestMatchers(HttpMethod.GET, "/api/rooms", "/api/rooms/**").authenticated()  // everyone can look at rooms
+                        .requestMatchers("/api/rooms", "/api/rooms/**").hasRole("ADMIN")                 // only admin adds/edits/deletes rooms
+                        .requestMatchers("/api/guests", "/api/guests/**").hasRole("ADMIN")               // only admin manages guests
+                        .requestMatchers("/api/bookings", "/api/bookings/**").authenticated()            // ownership checked in BookingService
+                        .anyRequest().authenticated())
+                .exceptionHandling(ex -> ex
+                        // no token / bad token -> 401
+                        .authenticationEntryPoint((request, response, e) ->
+                                writeError(response, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized - missing or invalid token"))
+                        // valid token but wrong role (e.g. GUEST -> POST /api/rooms) -> 403
+                        .accessDeniedHandler((request, response, e) ->
+                                writeError(response, HttpServletResponse.SC_FORBIDDEN, "Forbidden - you do not have access to this resource")))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // BCrypt: one-way hashing for passwords
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // CORS: which websites may call this API from a browser (all, for now)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
@@ -61,5 +68,11 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    private static void writeError(HttpServletResponse response, int status, String message) throws IOException {
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.getWriter().write("{\"error\":\"" + message + "\"}");
     }
 }

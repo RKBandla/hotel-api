@@ -17,24 +17,31 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNotFound(NotFoundException ex) {
-        return error(HttpStatus.NOT_FOUND, ex.getMessage());              // 404
+        return error(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<Map<String, Object>> handleRule(BusinessRuleException ex) {
-        return error(HttpStatus.BAD_REQUEST, ex.getMessage());            // 400
+        return error(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<Map<String, Object>> handleConflict(ConflictException ex) {
-        return error(HttpStatus.CONFLICT, ex.getMessage());               // 409
+        return error(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<Map<String, Object>> handleUnauthorized(UnauthorizedException ex) {
-        return error(HttpStatus.UNAUTHORIZED, ex.getMessage());           // 401
+        return error(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
+    // Step 5: logged in but not your data -> 403
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<Map<String, Object>> handleForbidden(ForbiddenException ex) {
+        return error(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
+    // @Valid failed: list every field problem, e.g. {"email": "email must be valid"}
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> fields = new LinkedHashMap<>();
@@ -47,10 +54,10 @@ public class ApiExceptionHandler {
         return ResponseEntity.badRequest().body(body);
     }
 
+    // Body could not be read, e.g. "type":"KING" or a date not in yyyy-MM-dd format
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<Map<String, Object>> handleBadJson(HttpMessageNotReadableException ex) {
-        return error(HttpStatus.BAD_REQUEST,
-                "Request body is invalid (check dates are yyyy-MM-dd and type is SINGLE, DOUBLE or SUITE)");
+        return error(HttpStatus.BAD_REQUEST, "Request body is invalid (check dates are yyyy-MM-dd and type is SINGLE, DOUBLE or SUITE)");
     }
 
     private ResponseEntity<Map<String, Object>> error(HttpStatus status, String message) {

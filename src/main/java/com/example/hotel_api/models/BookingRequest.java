@@ -11,7 +11,8 @@ public class BookingRequest {
     @NotBlank(message = "roomId is required")
     private String roomId;
 
-    @NotBlank(message = "guestId is required")
+    // Step 5: no longer required here.
+    // A GUEST always books for themselves (taken from the token); an ADMIN must send it.
     private String guestId;
 
     @NotNull(message = "checkIn is required (yyyy-MM-dd)")

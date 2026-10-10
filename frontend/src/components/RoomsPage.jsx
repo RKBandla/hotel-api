@@ -3,7 +3,9 @@ import { getRooms, createRoom, deleteRoom, getAvailableRooms } from "../services
 
 const EMPTY_ROOM = { number: "", type: "SINGLE", pricePerNight: "", capacity: 1 };
 
-function RoomsPage() {
+// isAdmin = true  -> can add and delete rooms
+// isAdmin = false -> guest: can only look at rooms and search availability
+function RoomsPage({ isAdmin }) {
     const [rooms, setRooms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -82,50 +84,52 @@ function RoomsPage() {
             {error && <div className="error">{error}</div>}
             {message && <div className="success">{message}</div>}
 
-            <div className="card">
-                <h3>Add a room</h3>
-                <form onSubmit={handleCreate} className="form-row">
-                    <label>
-                        Number
-                        <input
-                            value={form.number}
-                            onChange={(e) => setForm({ ...form, number: e.target.value })}
-                            required
-                        />
-                    </label>
-                    <label>
-                        Type
-                        <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-                            <option value="SINGLE">SINGLE</option>
-                            <option value="DOUBLE">DOUBLE</option>
-                            <option value="SUITE">SUITE</option>
-                        </select>
-                    </label>
-                    <label>
-                        Price per night
-                        <input
-                            type="number"
-                            step="0.01"
-                            value={form.pricePerNight}
-                            onChange={(e) => setForm({ ...form, pricePerNight: e.target.value })}
-                            required
-                        />
-                    </label>
-                    <label>
-                        Capacity
-                        <input
-                            type="number"
-                            min="1"
-                            value={form.capacity}
-                            onChange={(e) => setForm({ ...form, capacity: e.target.value })}
-                            required
-                        />
-                    </label>
-                    <label>
-                        <button type="submit">Add room</button>
-                    </label>
-                </form>
-            </div>
+            {isAdmin && (
+                <div className="card">
+                    <h3>Add a room</h3>
+                    <form onSubmit={handleCreate} className="form-row">
+                        <label>
+                            Number
+                            <input
+                                value={form.number}
+                                onChange={(e) => setForm({ ...form, number: e.target.value })}
+                                required
+                            />
+                        </label>
+                        <label>
+                            Type
+                            <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+                                <option value="SINGLE">SINGLE</option>
+                                <option value="DOUBLE">DOUBLE</option>
+                                <option value="SUITE">SUITE</option>
+                            </select>
+                        </label>
+                        <label>
+                            Price per night
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={form.pricePerNight}
+                                onChange={(e) => setForm({ ...form, pricePerNight: e.target.value })}
+                                required
+                            />
+                        </label>
+                        <label>
+                            Capacity
+                            <input
+                                type="number"
+                                min="1"
+                                value={form.capacity}
+                                onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+                                required
+                            />
+                        </label>
+                        <label>
+                            <button type="submit">Add room</button>
+                        </label>
+                    </form>
+                </div>
+            )}
 
             <div className="card">
                 <h3>Find available rooms</h3>
@@ -185,7 +189,7 @@ function RoomsPage() {
                                 <th>Type</th>
                                 <th>Price / night</th>
                                 <th>Capacity</th>
-                                <th></th>
+                                {isAdmin && <th></th>}
                             </tr>
                             </thead>
                             <tbody>
@@ -195,11 +199,13 @@ function RoomsPage() {
                                     <td>{room.type}</td>
                                     <td>${Number(room.pricePerNight).toFixed(2)}</td>
                                     <td>{room.capacity}</td>
-                                    <td>
-                                        <button className="danger" onClick={() => handleDelete(room)}>
-                                            Delete
-                                        </button>
-                                    </td>
+                                    {isAdmin && (
+                                        <td>
+                                            <button className="danger" onClick={() => handleDelete(room)}>
+                                                Delete
+                                            </button>
+                                        </td>
+                                    )}
                                 </tr>
                             ))}
                             </tbody>

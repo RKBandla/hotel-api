@@ -1,17 +1,14 @@
 package com.example.hotel_api.controllers;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import com.example.hotel_api.models.AppUser;
 import com.example.hotel_api.models.AuthRequest;
+import com.example.hotel_api.models.RegisterRequest;
 import com.example.hotel_api.services.AuthService;
 
 import jakarta.validation.Valid;
@@ -27,18 +24,20 @@ public class AuthController {
         this.authService = authService;
     }
 
-    // POST /api/auth/register  {"username":"rohan","password":"secret123"}
+    // POST /api/auth/register
+    // {"username":"rohan","password":"secret123","firstName":"Rohan","lastName":"Bandla","email":"rohan@test.com"}
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> register(@Valid @RequestBody AuthRequest request) {
-        AppUser user = authService.register(request.getUsername(), request.getPassword());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Map.of("message", "User registered", "username", user.getUsername()));
+    public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegisterRequest request) {
+        authService.register(request);
+        Map<String, String> body = new LinkedHashMap<>();
+        body.put("message", "User registered");
+        body.put("username", request.getUsername().trim());
+        return ResponseEntity.status(HttpStatus.CREATED).body(body);
     }
 
-    // POST /api/auth/login  {"username":"rohan","password":"secret123"}  -> token
+    // POST /api/auth/login {"username":"rohan","password":"secret123"}
     @PostMapping("/login")
-    public Map<String, String> login(@Valid @RequestBody AuthRequest request) {
-        String token = authService.login(request.getUsername(), request.getPassword());
-        return Map.of("token", token, "tokenType", "Bearer", "username", request.getUsername());
+    public Map<String, Object> login(@Valid @RequestBody AuthRequest request) {
+        return authService.login(request);
     }
 }

@@ -1,48 +1,66 @@
 package com.example.hotel_api.security;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 
+import com.example.hotel_api.models.AppUser;
+import com.example.hotel_api.models.Role;
+
 class JwtUtilTest {
 
-    private static final String SECRET = "test-secret-0123456789abcdef0123456789";
+    private static final String SECRET = "test-secret-for-unit-tests-0123456789abcdef";
+
+    private final JwtUtil jwtUtil = new JwtUtil(SECRET, 3600000);   // 1 hour
+
+    private final AppUser guest = new AppUser("rohan", "hash", Role.GUEST, "g1");
+    private final AppUser admin = new AppUser("admin", "hash", Role.ADMIN, null);
 
     @Test
-    void validTokenGivesBackTheUsername() {
-        JwtUtil jwtUtil = new JwtUtil(SECRET, 60_000);
-        String token = jwtUtil.generateToken("rohan");
+    void guestTokenCarriesUsernameRoleAndGuestId() {
+        AuthUser user = jwtUtil.parse(jwtUtil.generateToken(guest));
 
-        assertEquals("rohan", jwtUtil.extractUsername(token));
+        assertEquals("rohan", user.username());
+        assertEquals("GUEST", user.role());
+        assertEquals("g1", user.guestId());
+        assertFalse(user.isAdmin());
+    }
+
+    @Test
+    void adminTokenHasAdminRoleAndNoGuestId() {
+        AuthUser user = jwtUtil.parse(jwtUtil.generateToken(admin));
+
+        assertTrue(user.isAdmin());
+        assertNull(user.guestId());
     }
 
     @Test
     void tamperedTokenIsRejected() {
-        JwtUtil jwtUtil = new JwtUtil(SECRET, 60_000);
-        String token = jwtUtil.generateToken("rohan");
-        String tampered = token.substring(0, token.length() - 2) + "xx";   // change the signature
+        // take the GUEST token and swap in the ADMIN payload -> signature no longer matches
+        String[] guestParts = jwtUtil.generateToken(guest).split("\\.");
+        String[] adminParts = jwtUtil.generateToken(admin).split("\\.");
+        String forged = guestParts[0] + "." + adminParts[1] + "." + guestParts[2];
 
-        assertNull(jwtUtil.extractUsername(tampered));
+        assertNull(jwtUtil.parse(forged));
     }
 
     @Test
     void tokenFromAnotherSecretIsRejected() {
-        String token = new JwtUtil("another-secret-9876543210fedcba9876543210", 60_000).generateToken("rohan");
+        JwtUtil other = new JwtUtil("a-completely-different-secret-0123456789", 3600000);
 
-        assertNull(new JwtUtil(SECRET, 60_000).extractUsername(token));
+        assertNull(jwtUtil.parse(other.generateToken(guest)));
     }
 
     @Test
     void expiredTokenIsRejected() {
-        JwtUtil jwtUtil = new JwtUtil(SECRET, -1_000);   // already expired
-        String token = jwtUtil.generateToken("rohan");
+        JwtUtil alreadyExpired = new JwtUtil(SECRET, -1000);   // expired 1 second ago
 
-        assertNull(jwtUtil.extractUsername(token));
+        assertNull(jwtUtil.parse(alreadyExpired.generateToken(guest)));
     }
 
     @Test
     void garbageIsRejected() {
-        assertNull(new JwtUtil(SECRET, 60_000).extractUsername("not-a-token"));
+        assertNull(jwtUtil.parse("not-a-token"));
+        assertNull(jwtUtil.extractUsername("not-a-token"));
     }
 }

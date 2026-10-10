@@ -9,7 +9,9 @@ import {
 
 const EMPTY_BOOKING = { roomId: "", guestId: "", checkIn: "", checkOut: "" };
 
-function BookingsPage() {
+// isAdmin = true  -> all bookings, can book for any guest
+// isAdmin = false -> guest: only their own bookings, always books for themselves
+function BookingsPage({ isAdmin }) {
     const [bookings, setBookings] = useState([]);
     const [rooms, setRooms] = useState([]);
     const [guests, setGuests] = useState([]);
@@ -25,7 +27,7 @@ function BookingsPage() {
             const [bookingData, roomData, guestData] = await Promise.all([
                 getBookings(),
                 getRooms(),
-                getGuests(),
+                isAdmin ? getGuests() : Promise.resolve([]), // a guest is not allowed to list guests (403)
             ]);
             setBookings(bookingData || []);
             setRooms(roomData || []);
@@ -56,7 +58,11 @@ function BookingsPage() {
         setError("");
         setMessage("");
         try {
-            const booking = await createBooking(form);
+            const body = { roomId: form.roomId, checkIn: form.checkIn, checkOut: form.checkOut };
+            if (isAdmin) {
+                body.guestId = form.guestId; // only the admin chooses a guest
+            }
+            const booking = await createBooking(body);
             setMessage(
                 "Booked room " + roomNumber(booking.roomId) +
                 " – total $" + Number(booking.totalPrice).toFixed(2)
@@ -81,17 +87,21 @@ function BookingsPage() {
         }
     }
 
+    const canBook = rooms.length > 0 && (!isAdmin || guests.length > 0);
+
     return (
         <div>
-            <h2>Bookings</h2>
+            <h2>{isAdmin ? "All bookings" : "My bookings"}</h2>
 
             {error && <div className="error">{error}</div>}
             {message && <div className="success">{message}</div>}
 
             <div className="card">
                 <h3>New booking</h3>
-                {rooms.length === 0 || guests.length === 0 ? (
-                    <p className="muted">Add at least one room and one guest first.</p>
+                {!canBook ? (
+                    <p className="muted">
+                        {isAdmin ? "Add at least one room and one guest first." : "No rooms available yet."}
+                    </p>
                 ) : (
                     <form onSubmit={handleCreate} className="form-row">
                         <label>
@@ -109,21 +119,23 @@ function BookingsPage() {
                                 ))}
                             </select>
                         </label>
-                        <label>
-                            Guest
-                            <select
-                                value={form.guestId}
-                                onChange={(e) => setForm({ ...form, guestId: e.target.value })}
-                                required
-                            >
-                                <option value="">-- choose --</option>
-                                {guests.map((g) => (
-                                    <option key={g.id} value={g.id}>
-                                        {g.firstName} {g.lastName}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
+                        {isAdmin && (
+                            <label>
+                                Guest
+                                <select
+                                    value={form.guestId}
+                                    onChange={(e) => setForm({ ...form, guestId: e.target.value })}
+                                    required
+                                >
+                                    <option value="">-- choose --</option>
+                                    {guests.map((g) => (
+                                        <option key={g.id} value={g.id}>
+                                            {g.firstName} {g.lastName}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        )}
                         <label>
                             Check-in
                             <input
@@ -150,7 +162,7 @@ function BookingsPage() {
             </div>
 
             <div className="card">
-                <h3>All bookings</h3>
+                <h3>{isAdmin ? "All bookings" : "Your bookings"}</h3>
                 {loading ? (
                     <p>Loading...</p>
                 ) : bookings.length === 0 ? (
@@ -161,7 +173,7 @@ function BookingsPage() {
                             <thead>
                             <tr>
                                 <th>Room</th>
-                                <th>Guest</th>
+                                {isAdmin && <th>Guest</th>}
                                 <th>Check-in</th>
                                 <th>Check-out</th>
                                 <th>Total</th>
@@ -173,7 +185,7 @@ function BookingsPage() {
                             {bookings.map((b) => (
                                 <tr key={b.id}>
                                     <td>{roomNumber(b.roomId)}</td>
-                                    <td>{guestName(b.guestId)}</td>
+                                    {isAdmin && <td>{guestName(b.guestId)}</td>}
                                     <td>{b.checkIn}</td>
                                     <td>{b.checkOut}</td>
                                     <td>${Number(b.totalPrice).toFixed(2)}</td>

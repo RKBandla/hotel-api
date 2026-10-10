@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.example.hotel_api.exception.BusinessRuleException;
+import com.example.hotel_api.exception.ForbiddenException;
 import com.example.hotel_api.exception.NotFoundException;
 import com.example.hotel_api.models.Booking;
 import com.example.hotel_api.models.BookingRequest;
@@ -18,6 +19,7 @@ import com.example.hotel_api.models.Room;
 import com.example.hotel_api.repos.BookingRepository;
 import com.example.hotel_api.repos.GuestRepository;
 import com.example.hotel_api.repos.RoomRepository;
+import com.example.hotel_api.security.AuthUser;
 
 @Service
 public class BookingService {
@@ -104,5 +106,44 @@ public class BookingService {
         }
         booking.setStatus(BookingStatus.CANCELLED);
         return bookingRepository.save(booking);
+    }
+
+    // ---------- Step 5: role-aware methods ----------
+    // ADMIN can see and manage every booking. A GUEST only books for themselves
+    // and can only see or cancel their own bookings.
+
+    public List<Booking> getBookingsFor(AuthUser user) {
+        if (user.isAdmin()) {
+            return getAllBookings();
+        }
+        return bookingRepository.findByGuestId(user.guestId());
+    }
+
+    public Booking getBookingFor(AuthUser user, String id) {
+        Booking booking = getBookingById(id);
+        checkOwner(user, booking);
+        return booking;
+    }
+
+    public Booking createBookingFor(AuthUser user, BookingRequest request) {
+        if (user.isAdmin()) {
+            if (request.getGuestId() == null || request.getGuestId().isBlank()) {
+                throw new BusinessRuleException("guestId is required");
+            }
+        } else {
+            request.setGuestId(user.guestId());   // a guest always books for themselves
+        }
+        return createBooking(request);
+    }
+
+    public Booking cancelBookingFor(AuthUser user, String id) {
+        checkOwner(user, getBookingById(id));
+        return cancelBooking(id);
+    }
+
+    private void checkOwner(AuthUser user, Booking booking) {
+        if (!user.isAdmin() && !booking.getGuestId().equals(user.guestId())) {
+            throw new ForbiddenException("You can only access your own bookings");
+        }
     }
 }
