@@ -2,13 +2,20 @@ package com.example.hotel_api.models;
 
 import java.math.BigDecimal;
 
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.FieldType;
+
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+@Document(collection = "rooms")   // stored in the "rooms" collection
 public class Room {
 
+    @Id                               // MongoDB _id
     private String id;
 
     @NotBlank(message = "number is required")
@@ -19,6 +26,7 @@ public class Room {
 
     @NotNull(message = "pricePerNight is required")
     @DecimalMin(value = "1.00", message = "pricePerNight must be at least 1.00")
+    @Field(targetType = FieldType.DECIMAL128)   // store money as an exact decimal
     private BigDecimal pricePerNight;
 
     @Min(value = 1, message = "capacity must be at least 1")

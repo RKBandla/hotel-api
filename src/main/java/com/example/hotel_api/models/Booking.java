@@ -3,13 +3,21 @@ package com.example.hotel_api.models;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.FieldType;
+
+@Document(collection = "bookings")
 public class Booking {
 
+    @Id
     private String id;
     private String roomId;
     private String guestId;
     private LocalDate checkIn;
     private LocalDate checkOut;          // the guest leaves this morning
+    @Field(targetType = FieldType.DECIMAL128)
     private BigDecimal totalPrice;       // nights x pricePerNight
     private BookingStatus status = BookingStatus.ACTIVE;
 
