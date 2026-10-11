@@ -3,6 +3,10 @@ const USER_KEY = "hotelUser";
 const ROLE_KEY = "hotelRole";
 const GUEST_ID_KEY = "hotelGuestId";
 
+// Step 5D: on AWS the API lives on API Gateway, e.g. https://abc123.execute-api.us-east-1.amazonaws.com
+// Locally this is empty, so "/api/..." goes through the Vite proxy to localhost:8080.
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+
 // ---------- who is logged in ----------
 export function getToken() {
     return localStorage.getItem(TOKEN_KEY);
@@ -34,7 +38,12 @@ async function request(path, options = {}) {
         headers["Authorization"] = "Bearer " + token;
     }
 
-    const response = await fetch("/api" + path, { ...options, headers });
+    let response;
+    try {
+        response = await fetch(API_BASE + "/api" + path, { ...options, headers });
+    } catch (e) {
+        throw new Error("Cannot reach the server - please try again");
+    }
 
     // Token missing or expired -> log out and go back to the login page
     if (response.status === 401 && !path.startsWith("/auth")) {
